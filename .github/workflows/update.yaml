@@ -20,14 +20,14 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v26
         with:
-          nix_path: nixpkgs=channel:nixos-unstable
+          nix_path: nixpkgs=channel:nixos-26.05
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Check for upstream updates
         id: update
-        run: ./update.sh
+        run: bash ./update.sh
 
       - name: Test Build (Dry-run)
         # 运行构建测试，如果下载的哈希不对或者打包逻辑出错，Action 会在这里失败，防止提交损坏的代码
