@@ -113,6 +113,7 @@ in
         libxkbcommon
         alsa-lib
       ]} \
+        --set ZED_UPDATE_EXPLANATION "由 Nix 管理，请通过 nix flake update 升级" \
         --set XMODIFIERS "@im=fcitx" \
         --set GTK_IM_MODULE "fcitx" \
         --set QT_IM_MODULE "fcitx" \
