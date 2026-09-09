@@ -6,35 +6,36 @@ on:
     - cron: "0 0 * * *"
   workflow_dispatch: # 允许你在 GitHub 网页端手动点击按钮触发更新
 
-# 赋予自动提交代码的权限
+# contents: write  -> 推送 bot/auto-update 分支
+# pull-requests: write -> 创建 PR（缺这条会报 Resource not accessible by integration）
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   update-and-build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v26
+        uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixos-26.05
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
       - name: Check for upstream updates
         id: update
+        env:
+          # 让 update.sh 带认证调 GitHub API，避免匿名 60 次/小时限流
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash ./update.sh
 
-      - name: Test Build (Dry-run)
-        # 运行构建测试，如果下载的哈希不对或者打包逻辑出错，Action 会在这里失败，防止提交损坏的代码
-        run: nix build .#
+      - name: Test Build
+        run: nix build .# --print-build-logs
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v7
         with:
           commit-message: "chore(update): bump zedg to latest upstream release"
           title: "🚀 Update ZedG to latest upstream release"
@@ -43,5 +44,6 @@ jobs:
             此 PR 已自动更新 `sources.nix` 中的版本号和哈希值，并通过了本地 Nix 构建测试。
 
             请检查无误后合并。
-          branch: "bot/auto-update" # Action 会自动创建这个分支并提 PR
+          branch: "bot/auto-update"
           base: main
+          delete-branch: true
