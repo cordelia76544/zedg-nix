@@ -72,9 +72,15 @@ in
       mkdir -p "$out"
       cp -r . "$out/"
 
-      if [ -x "$out/bin/zedg" ] && [ ! -e "$out/bin/zed" ]; then
-        ln -s "$out/bin/zedg" "$out/bin/zed"
-      fi
+      # Upstream ships the GUI in bin/zedg and the CLI in libexec/zedg.
+      # The CLI searches for ../libexec/zed-editor relative to itself.
+      # Use that layout so CLI flags and bundle detection work correctly.
+      test -x "$out/bin/zedg"
+      test -x "$out/libexec/zedg"
+      mv "$out/bin/zedg" "$out/libexec/zed-editor"
+      mv "$out/libexec/zedg" "$out/bin/zedg"
+      ln -sfn zedg "$out/bin/zed"
+      ln -sfn ../bin/zedg "$out/libexec/zed-cli"
 
       if [ -f "$out/share/applications/zedg.desktop" ]; then
         substituteInPlace "$out/share/applications/zedg.desktop" \
@@ -84,6 +90,15 @@ in
       fi
 
       runHook postInstall
+    '';
+
+    # Exercise bundle detection as well as ELF linking; building alone does
+    # not catch a CLI installed next to the wrong GUI executable.
+    doInstallCheck = true;
+    installCheckPhase = ''
+      runHook preInstallCheck
+      "$out/bin/zedg" --version
+      runHook postInstallCheck
     '';
 
     # 上游 tarball 在 Debian/Ubuntu 容器里打包，lib/zedg/ 下混进了构建环境的
